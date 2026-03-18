@@ -1,0 +1,19 @@
+{
+  "id": "org.asyar.tauri-docs",
+  "name": "Tauri Docs",
+  "version": "1.0.0",
+  "description": "Tauri docs for Asyar",
+  "author": "Developer",
+  "main": "dist/index.js",
+  "searchable": true,
+  "type": "view",
+  "defaultView": "DefaultView",
+  "commands": [
+    {
+      "id": "open",
+      "name": "Open Tauri Docs",
+      "description": "Tauri docs for Asyar",
+      "resultType": "view"
+    }
+  ]
+}
