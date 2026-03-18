@@ -20,13 +20,8 @@ window.parent.postMessage({
   extensionId
 }, '*');
 
-// 3. Mount Svelte Application mapping to the requested view
-const searchParams = new URLSearchParams(window.location.search);
-const viewName = searchParams.get('view') || 'DefaultView';
-
-let viewComponent = DefaultView; // In a larger app, this might dynamically resolve
-
-const app = mount(viewComponent, {
+// 3. Mount the DefaultView
+const app = mount(DefaultView, {
   target: document.getElementById('app')!
 });
 
