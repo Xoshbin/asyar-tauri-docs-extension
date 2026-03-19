@@ -2,7 +2,7 @@ import { mount } from 'svelte';
 import DefaultView from './DefaultView.svelte';
 
 // Extension SDK Setup
-import { ExtensionContext, type INetworkService, type ILogService, type IActionService } from 'asyar-api';
+import { ExtensionContext, type INetworkService, type ILogService, type IActionService } from 'asyar-sdk';
 
 // The host parses the URI and mounts us. The hostname contains our extension ID.
 // Example: asyar-extension://org.asyar.tauri-docs/index.html

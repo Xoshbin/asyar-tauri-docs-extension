@@ -1,4 +1,4 @@
-import type { INetworkService } from 'asyar-api';
+import type { INetworkService } from 'asyar-sdk';
 
 const contentCache = new Map<string, { html: string; timestamp: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes

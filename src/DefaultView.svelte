@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { ActionContext, type ExtensionAction, type INetworkService, type ILogService, type IActionService } from 'asyar-api';
+  import { ActionContext, type ExtensionAction, type INetworkService, type ILogService, type IActionService } from 'asyar-sdk';
   import { fetchDocContent } from './lib/docsClient';
 
   // --- Props (injected by main.ts from the single ExtensionContext) ---
