@@ -8,7 +8,7 @@
   "searchable": true,
   "type": "view",
   "defaultView": "DefaultView",
-  "permissions": ["network"],
+  "permissions": ["network", "shell:open-url"],
   "commands": [
     {
       "id": "open",
