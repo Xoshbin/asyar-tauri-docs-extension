@@ -6,6 +6,7 @@
   "author": "Developer",
   "main": "dist/index.js",
   "searchable": true,
+  "icon": "📖",
   "type": "view",
   "defaultView": "DefaultView",
   "permissions": ["network", "shell:open-url"],
@@ -14,7 +15,8 @@
       "id": "open",
       "name": "Open Tauri Docs",
       "description": "Browse Tauri v2 documentation",
-      "resultType": "view"
+      "resultType": "view",
+      "icon": "📖"
     }
   ]
 }
