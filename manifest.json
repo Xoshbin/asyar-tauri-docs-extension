@@ -1,7 +1,7 @@
 {
   "id": "org.asyar.tauri-docs",
   "name": "Tauri Docs",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Search and browse Tauri v2 documentation",
   "author": "Developer",
   "main": "dist/index.js",
@@ -9,7 +9,10 @@
   "icon": "📖",
   "type": "view",
   "defaultView": "DefaultView",
-  "permissions": ["network", "shell:open-url"],
+  "permissions": [
+    "network",
+    "shell:open-url"
+  ],
   "commands": [
     {
       "id": "open",
