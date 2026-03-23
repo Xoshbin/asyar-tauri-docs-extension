@@ -16,7 +16,7 @@
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
     "@types/rollup-plugin-css-only": "^3.1.2",
-    "asyar-sdk": "^1.0.2",
+    "asyar-sdk": "workspace:*",
     "rollup-plugin-css-only": "^4.5.2",
     "typescript": "^5.0.0",
     "vite": "^6.0.0"
