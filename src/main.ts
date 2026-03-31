@@ -5,8 +5,14 @@ import DefaultView from './DefaultView.svelte';
 import { ExtensionContext, type INetworkService, type ILogService, type IActionService } from 'asyar-sdk';
 
 // The host parses the URI and mounts us. The hostname contains our extension ID.
-// Example: asyar-extension://org.asyar.tauri-docs/index.html
-const extensionId = window.location.hostname || 'org.asyar.tauri-docs';
+// Example (macOS/Linux):  asyar-extension://org.asyar.tauri-docs/index.html
+// Example (Windows):      asyar-extension://localhost/org.asyar.tauri-docs/index.html
+const extensionId = (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === 'asyar-extension.localhost'
+)
+  ? window.location.pathname.split('/').filter(Boolean)[0] || 'org.asyar.tauri-docs'
+  : window.location.hostname || 'org.asyar.tauri-docs';
 
 console.log(`[Extension:${extensionId}] Bootstrapping...`);
 
@@ -40,15 +46,21 @@ window.addEventListener('keydown', (event) => {
   }
 });
 
-// 4. Mount the DefaultView, passing services from the single context as props
-//    so the component does not need to create its own ExtensionContext.
-const app = mount(DefaultView, {
-  target: document.getElementById('app')!,
-  props: {
-    network: context.getService<INetworkService>('NetworkService'),
-    logger: context.getService<ILogService>('LogService'),
-    actionService: context.getService<IActionService>('ActionService'),
-  }
-});
+// 4. Resolve services once — passed as props so components never create their own context.
+const network       = context.getService<INetworkService>('NetworkService');
+const logger        = context.getService<ILogService>('LogService');
+const actionService = context.getService<IActionService>('ActionService');
 
-export default app;
+// 5. Mount the correct view based on the ?view= query param.
+const viewName = new URLSearchParams(window.location.search).get('view') || 'DefaultView';
+const target   = document.getElementById('app')!;
+
+let app: any;
+if (viewName === 'DefaultView') {
+  app = mount(DefaultView, {
+    target,
+    props: { network, logger, actionService },
+  });
+}
+
+export default app ?? null;

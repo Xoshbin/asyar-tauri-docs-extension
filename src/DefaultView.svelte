@@ -123,7 +123,7 @@
 
   onDestroy(() => {
     // Unregister with the same bare ID used in registerAction
-    actionServiceProp.unregisterAction('open-in-browser');
+    actionServiceProp.unregisterAction('org.asyar.tauri-docs:open-in-browser');
     window.removeEventListener('message', handleMessage);
   });
 
@@ -224,14 +224,14 @@
   // Register the "Open in Browser" action whenever selectedDoc changes.
   // The execute closure is stored locally in the iframe's ExtensionBridge registry.
   // The host forwards asyar:action:execute back to the iframe when triggered from ⌘K.
-  // ID 'open-in-browser' is used bare (no extension prefix) — must match unregisterAction calls.
+  // ID 'org.asyar.tauri-docs:open-in-browser' is used bare (no extension prefix) — must match unregisterAction calls.
   $effect(() => {
     if (!selectedDoc) return;
 
     const currentDoc = selectedDoc; // capture for closure
 
     const action: ExtensionAction = {
-      id: 'open-in-browser',
+      id: 'org.asyar.tauri-docs:open-in-browser',
       title: 'Open in Browser',
       description: `Open ${currentDoc.title} in browser`,
       extensionId: 'org.asyar.tauri-docs',
@@ -244,7 +244,7 @@
 
     // Cleanup: unregister using the same bare ID
     return () => {
-      actionServiceProp.unregisterAction('open-in-browser');
+      actionServiceProp.unregisterAction('org.asyar.tauri-docs:open-in-browser');
     };
   });
 </script>
