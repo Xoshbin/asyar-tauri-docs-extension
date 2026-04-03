@@ -1,8 +1,9 @@
+import 'asyar-sdk/tokens.css';
 import { mount } from 'svelte';
 import DefaultView from './DefaultView.svelte';
 
 // Extension SDK Setup
-import { ExtensionContext, type INetworkService, type ILogService, type IActionService } from 'asyar-sdk';
+import { ExtensionContext, registerIconElement, type INetworkService, type ILogService, type IActionService } from 'asyar-sdk';
 
 // The host parses the URI and mounts us. The hostname contains our extension ID.
 // Example (macOS/Linux):  asyar-extension://org.asyar.tauri-docs/index.html
@@ -19,6 +20,7 @@ console.log(`[Extension:${extensionId}] Bootstrapping...`);
 // 1. Initialize SDK context — single instance for the entire extension lifetime
 const context = new ExtensionContext();
 context.setExtensionId(extensionId);
+registerIconElement();
 
 // 2. Notify Host that we are loaded and ready
 window.parent.postMessage({
