@@ -3,7 +3,9 @@ import { mount } from 'svelte';
 import DefaultView from './DefaultView.svelte';
 
 // Extension SDK Setup
-import { ExtensionContext, registerIconElement, type INetworkService, type ILogService, type IActionService } from 'asyar-sdk';
+import { ExtensionContext, ExtensionBridge, registerIconElement, type INetworkService, type ILogService, type IActionService } from 'asyar-sdk';
+import extensionModule from './index';
+import manifest from '../manifest.json';
 
 // The host parses the URI and mounts us. The hostname contains our extension ID.
 // Example (macOS/Linux):  asyar-extension://org.asyar.tauri-docs/index.html
@@ -22,13 +24,19 @@ const context = new ExtensionContext();
 context.setExtensionId(extensionId);
 registerIconElement();
 
-// 2. Notify Host that we are loaded and ready
+// 2. Initialize ExtensionBridge for IPC-based search and command handling.
+//    The bridge listens for asyar:search:request and routes to extension.search().
+const bridge = ExtensionBridge.getInstance();
+bridge.registerManifest(manifest as any);
+bridge.registerExtensionImplementation(extensionId, extensionModule);
+
+// 3. Notify Host that we are loaded and ready
 window.parent.postMessage({
   type: 'asyar:extension:loaded',
   extensionId
 }, '*');
 
-// 3. Forward Cmd+K (and other global shortcuts) to the host so the action
+// 4. Forward Cmd+K (and other global shortcuts) to the host so the action
 //    drawer opens even when focus is inside the iframe.
 window.addEventListener('keydown', (event) => {
   const isCommandK = (event.metaKey || event.ctrlKey) && event.key === 'k';
@@ -48,12 +56,12 @@ window.addEventListener('keydown', (event) => {
   }
 });
 
-// 4. Resolve services once — passed as props so components never create their own context.
+// 5. Resolve services once — passed as props so components never create their own context.
 const network       = context.getService<INetworkService>('NetworkService');
 const logger        = context.getService<ILogService>('LogService');
 const actionService = context.getService<IActionService>('ActionService');
 
-// 5. Mount the correct view based on the ?view= query param.
+// 6. Mount the correct view based on the ?view= query param.
 const viewName = new URLSearchParams(window.location.search).get('view') || 'DefaultView';
 const target   = document.getElementById('app')!;
 
