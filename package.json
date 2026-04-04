@@ -1,6 +1,6 @@
 {
   "name": "org.asyar.tauri-docs",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Tauri docs for Asyar",
   "type": "module",
   "scripts": {
