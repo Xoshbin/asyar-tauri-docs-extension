@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { ActionContext, SearchEngine, type ExtensionAction, type INetworkService, type ILogService, type IActionService } from 'asyar-sdk';
+  import { ActionContext, SearchEngine, type ExtensionAction, type INetworkService, type ILogService, type IActionService, type IFeedbackService } from 'asyar-sdk';
   import { fetchDocContent } from './lib/docsClient';
   import { TAURI_DOCS, type DocEntry } from './data/tauriDocs';
 
@@ -9,8 +9,9 @@
     network: INetworkService;
     logger: ILogService;
     actionService: IActionService;
+    feedbackService: IFeedbackService;
   }
-  let { network, logger, actionService: actionServiceProp }: Props = $props();
+  let { network, logger, actionService: actionServiceProp, feedbackService }: Props = $props();
 
   // --- State ---
   let searchQuery = $state('');
@@ -147,7 +148,7 @@
     }
   }
 
-  function openInBrowser(path: string) {
+  async function openInBrowser(path: string) {
     const url = `https://v2.tauri.app${path}`;
     // Route through the host's opener plugin — window.open() is not reliable in Tauri's WKWebView.
     // The host handles 'asyar:api:opener:open' by calling invoke('plugin:opener|open_url', { url }).
@@ -157,6 +158,11 @@
       messageId: Math.random().toString(36).slice(2),
       extensionId: 'org.asyar.tauri-docs',
     }, '*');
+
+    // Show a HUD pill confirming the action and close the launcher in one
+    // shot — exactly the use case the HUD primitive was built for.
+    const title = selectedDoc?.title ?? 'doc';
+    await feedbackService.showHUD(`📖 Opened ${title} in browser`);
   }
 
   // Register the "Open in Browser" action whenever selectedDoc changes.

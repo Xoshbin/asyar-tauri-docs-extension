@@ -3,7 +3,7 @@ import { mount } from 'svelte';
 import DefaultView from './DefaultView.svelte';
 
 // Extension SDK Setup
-import { ExtensionContext, ExtensionBridge, registerIconElement, type INetworkService, type ILogService, type IActionService } from 'asyar-sdk';
+import { ExtensionContext, ExtensionBridge, registerIconElement, type INetworkService, type ILogService, type IActionService, type IFeedbackService } from 'asyar-sdk';
 import extensionModule from './index';
 import manifest from '../manifest.json';
 
@@ -57,9 +57,10 @@ window.addEventListener('keydown', (event) => {
 });
 
 // 5. Resolve services once — passed as props so components never create their own context.
-const network       = context.getService<INetworkService>('NetworkService');
-const logger        = context.getService<ILogService>('LogService');
-const actionService = context.getService<IActionService>('ActionService');
+const network         = context.getService<INetworkService>('NetworkService');
+const logger          = context.getService<ILogService>('LogService');
+const actionService   = context.getService<IActionService>('ActionService');
+const feedbackService = context.getService<IFeedbackService>('FeedbackService');
 
 // 6. Mount the correct view based on the ?view= query param.
 const viewName = new URLSearchParams(window.location.search).get('view') || 'DefaultView';
@@ -69,7 +70,7 @@ let app: any;
 if (viewName === 'DefaultView') {
   app = mount(DefaultView, {
     target,
-    props: { network, logger, actionService },
+    props: { network, logger, actionService, feedbackService },
   });
 }
 
