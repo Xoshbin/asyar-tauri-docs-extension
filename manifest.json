@@ -1,7 +1,7 @@
 {
   "id": "org.asyar.tauri-docs",
   "name": "Tauri Docs",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "description": "Search and browse Tauri v2 documentation",
   "author": "Developer",
   "main": "dist/index.js",
@@ -9,10 +9,27 @@
   "icon": "📖",
   "type": "view",
   "defaultView": "DefaultView",
-  "asyarSdk": "^1.9.1",
+  "asyarSdk": "^1.11.0",
+  "minAppVersion": "1.0.0",
   "permissions": [
     "network",
     "shell:open-url"
+  ],
+  "preferences": [
+    {
+      "name": "maxResults",
+      "type": "number",
+      "title": "Max search results",
+      "description": "How many matches to show per query (1–20).",
+      "default": 5
+    },
+    {
+      "name": "openInBrowser",
+      "type": "checkbox",
+      "title": "Open links in external browser",
+      "description": "When enabled, clicking a result opens in the system browser instead of the in-view reader.",
+      "default": false
+    }
   ],
   "commands": [
     {

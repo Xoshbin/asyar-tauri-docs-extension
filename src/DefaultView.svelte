@@ -1,17 +1,68 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { ActionContext, SearchEngine, type ExtensionAction, type INetworkService, type ILogService, type IActionService, type IFeedbackService } from 'asyar-sdk';
+  import {
+    ActionContext,
+    SearchEngine,
+    type ExtensionAction,
+    type ExtensionContext,
+    type INetworkService,
+    type IActionService,
+    type IFeedbackService,
+  } from 'asyar-sdk';
   import { fetchDocContent } from './lib/docsClient';
   import { TAURI_DOCS, type DocEntry } from './data/tauriDocs';
 
-  // --- Props (injected by main.ts from the single ExtensionContext) ---
+  // --- Props ---
+  // `context` is the single ExtensionContext created in main.ts. We pass
+  // it explicitly so components can read `context.preferences` and
+  // subscribe to `context.onPreferencesChanged` without constructing a
+  // second context (which would double up focus listeners and break the
+  // service proxy extensionId injection).
+  //
+  // All other services are pre-resolved in main.ts via context.getService
+  // and passed as props. Children never call getService themselves.
   interface Props {
+    context: ExtensionContext;
     network: INetworkService;
-    logger: ILogService;
     actionService: IActionService;
     feedbackService: IFeedbackService;
   }
-  let { network, logger, actionService: actionServiceProp, feedbackService }: Props = $props();
+  let { context, network, actionService: actionServiceProp, feedbackService }: Props = $props();
+
+  // --- Preferences (live via onPreferencesChanged) ---
+  //
+  // `context.preferences` is a frozen snapshot on a plain prop, so it
+  // isn't reactive on its own. We drive a local `$state` counter
+  // (`prefsVersion`) from the change callback, then use `$derived.by(...)`
+  // so Svelte tracks `prefsVersion` as a dep and re-reads
+  // `context.preferences.X` on every bump.
+  let prefsVersion = $state(0);
+
+  let maxResults = $derived.by<number>(() => {
+    prefsVersion; // eslint-disable-line @typescript-eslint/no-unused-expressions
+    const v = context.preferences.maxResults;
+    return typeof v === 'number' ? v : 5;
+  });
+  let openInBrowserByDefault = $derived.by<boolean>(() => {
+    prefsVersion; // eslint-disable-line @typescript-eslint/no-unused-expressions
+    return Boolean(context.preferences.openInBrowser);
+  });
+
+  const unsubscribePrefs = context.onPreferencesChanged(() => {
+    // Bump the version — the two $derived blocks above will re-read
+    // context.preferences and propagate the new values to the view.
+    prefsVersion += 1;
+  });
+
+  // Re-run the search (with the new maxResults clamp) whenever the
+  // version bumps. This is separate from the $derived values because it
+  // mutates `filteredDocs` rather than just reading.
+  $effect(() => {
+    // Touch prefsVersion so Svelte tracks it as a dep.
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    prefsVersion;
+    filterDocs();
+  });
 
   // --- State ---
   let searchQuery = $state('');
@@ -50,10 +101,17 @@
         selectedIndex = Math.max(selectedIndex - 1, 0);
         ensureVisible();
       } else if (key === 'Enter') {
-        // Re-affirm selection; the $effect on selectedDoc handles the fetch.
-        // Calling selectItem ensures the $effect fires even if selectedIndex
-        // did not change (e.g. user presses Enter without navigating first).
-        selectItem(selectedIndex);
+        // When the user prefers external-browser mode, Enter opens the
+        // selected doc in the system browser via the opener plugin. In
+        // inline-preview mode, Enter re-affirms the selection so the
+        // $effect on selectedDoc fires even if selectedIndex didn't change
+        // (e.g. user presses Enter without navigating first).
+        const doc = filteredDocs[selectedIndex];
+        if (openInBrowserByDefault && doc) {
+          openInBrowser(doc.path);
+        } else {
+          selectItem(selectedIndex);
+        }
       }
     }
   }
@@ -69,6 +127,7 @@
     // Unregister with the same bare ID used in registerAction
     actionServiceProp.unregisterAction('org.asyar.tauri-docs:open-in-browser');
     window.removeEventListener('message', handleMessage);
+    unsubscribePrefs();
   });
 
   // --- Search ---
@@ -79,7 +138,11 @@
   function filterDocs() {
     searchEngine.setItems(allDocs);
     const q = searchQuery.trim();
-    filteredDocs = q ? searchEngine.search(q) : allDocs;
+    // Clamp to the `maxResults` preference. For empty queries we still
+    // show everything so the user can browse sections.
+    const hits = q ? searchEngine.search(q) : allDocs;
+    const clamp = Math.max(1, Math.min(20, maxResults));
+    filteredDocs = q ? hits.slice(0, clamp) : hits;
     selectedIndex = 0;
   }
 
@@ -125,9 +188,16 @@
   let selectedDoc: DocEntry | null = $derived(filteredDocs[selectedIndex] ?? null);
 
   $effect(() => {
-    if (selectedDoc) {
-      fetchAndRenderDoc(`https://v2.tauri.app${selectedDoc.path}`);
+    if (!selectedDoc) return;
+    // When the user has preferred external-browser mode in Settings,
+    // selecting a result skips the in-view fetch entirely and hands the
+    // URL to the host's opener plugin. In-view preview stays blank.
+    if (openInBrowserByDefault) {
+      docHtml = null;
+      docError = false;
+      return;
     }
+    fetchAndRenderDoc(`https://v2.tauri.app${selectedDoc.path}`);
   });
 
   async function fetchAndRenderDoc(url: string) {
@@ -135,7 +205,9 @@
     docError = false; // reset before each fetch so stale error state never bleeds through
     isLoadingDoc = true;
     try {
-      const html = await fetchDocContent(url, network, logger);
+      // `logger` is an optional 3rd arg on fetchDocContent — we skip it
+      // here, failures are reflected in the UI via `docError` anyway.
+      const html = await fetchDocContent(url, network);
       if (html) {
         docHtml = html;
       } else {
