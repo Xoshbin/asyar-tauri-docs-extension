@@ -1,7 +1,7 @@
 {
   "id": "org.asyar.tauri-docs",
   "name": "Tauri Docs",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Search and browse Tauri v2 documentation",
   "author": "Developer",
   "main": "dist/index.js",
