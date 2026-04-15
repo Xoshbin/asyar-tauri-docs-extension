@@ -15,7 +15,7 @@ class TauriDocsExtension implements Extension {
   }
 
   async initialize(context: ExtensionContext) {
-    this.extensionManager = context.getService("ExtensionManager");
+    this.extensionManager = context.getService("extensions");
   }
 
   async activate(): Promise<void> {}

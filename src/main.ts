@@ -101,9 +101,9 @@ window.parent.postMessage({ type: 'asyar:extension:loaded', extensionId }, '*');
 
 // 5. Resolve services once — passed as props so children never construct
 //    their own context (which would attach duplicate focus listeners).
-const network         = context.getService<INetworkService>('NetworkService');
-const actionService   = context.getService<IActionService>('ActionService');
-const feedbackService = context.getService<IFeedbackService>('FeedbackService');
+const network         = context.getService<INetworkService>('network');
+const actionService   = context.getService<IActionService>('actions');
+const feedbackService = context.getService<IFeedbackService>('feedback');
 
 // 6. Mount the correct view based on the ?view= query param.
 const viewName = new URLSearchParams(window.location.search).get('view') || 'DefaultView';
