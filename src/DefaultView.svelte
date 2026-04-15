@@ -40,12 +40,12 @@
 
   let maxResults = $derived.by<number>(() => {
     prefsVersion; // eslint-disable-line @typescript-eslint/no-unused-expressions
-    const v = context.preferences.maxResults;
+    const v = context.preferences.values.maxResults;
     return typeof v === 'number' ? v : 5;
   });
   let openInBrowserByDefault = $derived.by<boolean>(() => {
     prefsVersion; // eslint-disable-line @typescript-eslint/no-unused-expressions
-    return Boolean(context.preferences.openInBrowser);
+    return Boolean(context.preferences.values.openInBrowser);
   });
 
   const unsubscribePrefs = context.onPreferencesChanged(() => {
