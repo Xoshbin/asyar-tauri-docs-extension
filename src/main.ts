@@ -34,7 +34,7 @@ import DefaultView from './DefaultView.svelte';
 
 import {
   ExtensionContext,
-  ExtensionBridge,
+  extensionBridge,
   registerIconElement,
   type INetworkService,
   type IActionService,
@@ -70,9 +70,8 @@ registerIconElement();
 //      - asyar:command:execute → extension.executeCommand(commandId, args)
 //    The bridge has `window.addEventListener('message', ...)` handlers
 //    that look up the registered implementation by extensionId.
-const bridge = ExtensionBridge.getInstance();
-bridge.registerManifest(manifest as any);
-bridge.registerExtensionImplementation(extensionId, extensionModule);
+extensionBridge.registerManifest(manifest as any);
+extensionBridge.registerExtensionImplementation(extensionId, extensionModule);
 
 // 3. Forward Cmd+K (and other global shortcuts) to the host so the
 //    action drawer opens even when focus is inside the iframe.
