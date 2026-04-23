@@ -8,7 +8,7 @@
     type INetworkService,
     type IActionService,
     type IFeedbackService,
-  } from 'asyar-sdk';
+  } from 'asyar-sdk/view';
   import { fetchDocContent } from './lib/docsClient';
   import { TAURI_DOCS, type DocEntry } from './data/tauriDocs';
 

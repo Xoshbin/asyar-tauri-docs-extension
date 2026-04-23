@@ -1,24 +1,70 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
-import { fileURLToPath, URL } from 'url';
 import { existsSync } from 'fs';
+import { fileURLToPath, URL } from 'url';
 import { resolve } from 'path';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
-const localSdkEntry = resolve(__dirname, '../../asyar-sdk/src/index.ts');
+
+// Mirror the launcher's post-Phase-4.1 per-subpath SDK alias pattern so dev
+// edits in `../../asyar-sdk/src/{contracts,worker,view}.ts` hot-reload without
+// going through the SDK's compiled `dist/`. In CI / published-npm mode the
+// local source does not exist and Node resolution falls back to
+// node_modules/asyar-sdk/package.json exports — which is why the alias object
+// is empty in that branch.
+//
+// Never alias the bare `asyar-sdk` specifier: the SDK's exports map has no
+// "." entry, so the bare import is invalid and must fail at build time.
+const sdkSrcDir = resolve(__dirname, '../../asyar-sdk/src');
+const sdkSubpaths = ['contracts', 'worker', 'view'] as const;
+const useLocalSdk = sdkSubpaths.every((sub) =>
+  existsSync(resolve(sdkSrcDir, `${sub}.ts`)),
+);
+
+const sdkAliases = useLocalSdk
+  ? Object.fromEntries(
+      sdkSubpaths.map((sub) => [
+        `asyar-sdk/${sub}`,
+        resolve(sdkSrcDir, `${sub}.ts`),
+      ]),
+    )
+  : {};
 
 export default defineConfig(() => {
-  const useLocalSdk = existsSync(localSdkEntry);
+  // eslint-disable-next-line no-console
   console.log(
     `\x1b[36m[Vite] (Tauri Docs Extension)\x1b[0m Asyar-SDK: \x1b[33m${
-      useLocalSdk ? "Local Source (" + localSdkEntry + ")" : "node_modules (NPM)"
-    }\x1b[0m`
+      useLocalSdk ? `Local Source (${sdkSrcDir})` : 'node_modules (NPM)'
+    }\x1b[0m`,
   );
 
   return {
     plugins: [svelte()],
+
+    // Relative asset paths in emitted HTML so the Rust `asyar-extension://`
+    // scheme handler can serve `./view.js` / `./assets/*` from the extension
+    // install path without any absolute-root rewriting.
+    base: './',
+
     resolve: {
-      alias: useLocalSdk ? [{ find: /^asyar-sdk$/, replacement: localSdkEntry }] : undefined,
+      alias: sdkAliases,
+    },
+
+    build: {
+      outDir: 'dist',
+      emptyOutDir: true,
+      assetsDir: 'assets',
+      rollupOptions: {
+        input: resolve(__dirname, 'view.html'),
+        output: {
+          // Deterministic, hash-free entry name so the emitted view.html
+          // loads `./view.js` directly. Chunks and assets keep a content
+          // hash for cache-busting behind view.html's <link>/<script> tags.
+          entryFileNames: 'view.js',
+          chunkFileNames: 'assets/[name]-[hash].js',
+          assetFileNames: 'assets/[name]-[hash][extname]',
+        },
+      },
     },
   };
 });
