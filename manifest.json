@@ -4,11 +4,9 @@
   "version": "1.1.1",
   "description": "Search and browse Tauri v2 documentation",
   "author": "Developer",
-  "main": "dist/index.js",
   "searchable": true,
   "icon": "📖",
-  "type": "view",
-  "defaultView": "DefaultView",
+  "type": "extension",
   "asyarSdk": "^1.13.0",
   "permissions": [
     "network",
@@ -35,9 +33,9 @@
       "id": "open",
       "name": "Open Tauri Docs",
       "description": "Browse Tauri v2 documentation",
-      "resultType": "view",
-      "view": "DefaultView",
-      "icon": "📖"
+      "icon": "📖",
+      "mode": "view",
+      "component": "DefaultView"
     }
   ]
 }
