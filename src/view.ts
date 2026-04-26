@@ -14,10 +14,10 @@
 //    resolves services, mounts the Svelte view, wires the ⌘K forwarder,
 //    and signals readiness so the host can deliver the preferences bundle.
 //
-// Imports come exclusively from `asyar-sdk/view` per the Phase 4 subpath
-// model. That entry asserts `window.__ASYAR_ROLE__ === "view"` at module
-// load time; the Rust `asyar-extension://` scheme handler injects that
-// global into `view.html` at serve time (see `uri_schemes.rs::inject_asyar_role`).
+// Imports come exclusively from `asyar-sdk/view`. That entry asserts
+// `window.__ASYAR_ROLE__ === "view"` at module load time; the Rust
+// `asyar-extension://` scheme handler injects that global into `view.html`
+// at serve time (see `uri_schemes.rs::inject_asyar_role`).
 // ───────────────────────────────────────────────────────────────────────────
 
 import 'asyar-sdk/tokens.css';

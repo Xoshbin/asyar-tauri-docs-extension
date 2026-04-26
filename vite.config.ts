@@ -6,9 +6,9 @@ import { resolve } from 'path';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
-// Mirror the launcher's post-Phase-4.1 per-subpath SDK alias pattern so dev
-// edits in `../../asyar-sdk/src/{contracts,worker,view}.ts` hot-reload without
-// going through the SDK's compiled `dist/`. In CI / published-npm mode the
+// Mirror the launcher's per-subpath SDK alias pattern so dev edits in
+// `../../asyar-sdk/src/{contracts,worker,view}.ts` hot-reload without going
+// through the SDK's compiled `dist/`. In CI / published-npm mode the
 // local source does not exist and Node resolution falls back to
 // node_modules/asyar-sdk/package.json exports — which is why the alias object
 // is empty in that branch.
