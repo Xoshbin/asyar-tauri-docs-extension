@@ -7,7 +7,7 @@
   "searchable": true,
   "icon": "📖",
   "type": "extension",
-  "asyarSdk": "^2.0.0",
+  "asyarSdk": "^2.1.0",
   "permissions": [
     "network",
     "shell:open-url"
