@@ -55,12 +55,16 @@ export default defineConfig(() => {
       emptyOutDir: true,
       assetsDir: 'assets',
       rollupOptions: {
-        input: resolve(__dirname, 'view.html'),
+        input: {
+          worker: resolve(__dirname, 'worker.html'),
+          view: resolve(__dirname, 'view.html'),
+        },
         output: {
-          // Deterministic, hash-free entry name so the emitted view.html
-          // loads `./view.js` directly. Chunks and assets keep a content
-          // hash for cache-busting behind view.html's <link>/<script> tags.
-          entryFileNames: 'view.js',
+          // Deterministic, hash-free entry names so worker.html loads
+          // `./worker.js` and view.html loads `./view.js`. Shared chunks
+          // and assets keep content hashes for cache-busting behind the
+          // HTML's <link>/<script> tags.
+          entryFileNames: '[name].js',
           chunkFileNames: 'assets/[name]-[hash].js',
           assetFileNames: 'assets/[name]-[hash][extname]',
         },
