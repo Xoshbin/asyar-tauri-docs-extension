@@ -3,6 +3,7 @@
   import {
     ActionContext,
     SearchEngine,
+    searchBarAccessory,
     type ExtensionAction,
     type ExtensionContext,
     type INetworkService,
@@ -72,6 +73,21 @@
   let isLoading = $state(true);
   let listContainer: HTMLDivElement | undefined = $state();
 
+  // Section filter chosen via the host's searchbar accessory dropdown.
+  // Seeded with the manifest's `default` (`"all"`) and updated by the
+  // `searchBarAccessory.onChange` listener wired below — onChange fires
+  // once with the seed value when the view mounts and again on every
+  // user pick or programmatic set.
+  let sectionFilter = $state<string>('all');
+
+  const offAccessory = searchBarAccessory.onChange((value) => {
+    sectionFilter = value;
+    // Filter changes can shrink filteredDocs; reset the cursor so it
+    // never dangles past the new end.
+    selectedIndex = 0;
+    filterDocs();
+  });
+
   let docHtml: string | null = $state(null);
   let isLoadingDoc = $state(false);
   let docError = $state(false);
@@ -128,6 +144,7 @@
     actionServiceProp.unregisterAction('org.asyar.tauri-docs:open-in-browser');
     window.removeEventListener('message', handleMessage);
     unsubscribePrefs();
+    offAccessory();
   });
 
   // --- Search ---
@@ -141,8 +158,14 @@
     // Clamp to the `maxResults` preference. For empty queries we still
     // show everything so the user can browse sections.
     const hits = q ? searchEngine.search(q) : allDocs;
+    // Apply the searchbar-accessory section filter on top of the
+    // text-search hits. `"all"` means "no section filter".
+    const sectionFiltered =
+      sectionFilter === 'all'
+        ? hits
+        : hits.filter((d) => d.section === sectionFilter);
     const clamp = Math.max(1, Math.min(20, maxResults));
-    filteredDocs = q ? hits.slice(0, clamp) : hits;
+    filteredDocs = q ? sectionFiltered.slice(0, clamp) : sectionFiltered;
     selectedIndex = 0;
   }
 

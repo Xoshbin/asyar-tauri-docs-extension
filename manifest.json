@@ -35,7 +35,20 @@
       "description": "Browse Tauri v2 documentation",
       "icon": "📖",
       "mode": "view",
-      "component": "DefaultView"
+      "component": "DefaultView",
+      "searchBarAccessory": {
+        "type": "dropdown",
+        "default": "all",
+        "options": [
+          { "value": "all",             "title": "All Sections" },
+          { "value": "Getting Started", "title": "Getting Started" },
+          { "value": "Core Concepts",   "title": "Core Concepts" },
+          { "value": "Plugins",         "title": "Plugins" },
+          { "value": "Configuration",   "title": "Configuration" },
+          { "value": "Distribution",    "title": "Distribution" },
+          { "value": "Reference",       "title": "Reference" }
+        ]
+      }
     }
   ],
   "background": {
