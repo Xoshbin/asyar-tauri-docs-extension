@@ -2,12 +2,13 @@
 // worker.ts — Tier 2 tauri-docs extension worker entry, loaded by
 // dist/worker.html.
 //
-// Owns the searchable surface: the ufuzzy-backed `SearchEngine` over
-// `TAURI_DOCS`, the `TauriDocsWorkerExtension` that implements `search()`
-// against it, and the `extensionBridge` registration that makes the launcher
-// dispatch `asyar:search:request` envelopes here. Lives in the always-on
-// worker iframe so query handling stays alive across the view's lifecycle —
-// see `asyar-launcher/CLAUDE.md` ("`searchable: true` `search()` handler").
+// Owns the searchable surface: the host's tiered fuzzy ranker (via
+// `ISearchService`, `rankDocs`) over `TAURI_DOCS`, the
+// `TauriDocsWorkerExtension` that implements `search()` against it, and the
+// `extensionBridge` registration that makes the launcher dispatch
+// `asyar:search:request` envelopes here. Lives in the always-on worker
+// iframe so query handling stays alive across the view's lifecycle — see
+// `asyar-launcher/CLAUDE.md` ("`searchable: true` `search()` handler").
 //
 // Imports come from `asyar-sdk/worker` (role assertion + worker-only
 // ExtensionContext) and `asyar-sdk/contracts` (pure types). The /worker
@@ -21,13 +22,14 @@ import {
   extensionBridge,
 } from 'asyar-sdk/worker';
 import {
-  SearchEngine,
   type Extension,
   type ExtensionContext,
   type ExtensionResult,
+  type ISearchService,
 } from 'asyar-sdk/contracts';
 import manifest from '../manifest.json';
-import { TAURI_DOCS, type DocEntry } from './data/tauriDocs';
+import { TAURI_DOCS } from './data/tauriDocs';
+import { rankDocs } from './lib/docSearch';
 
 const extensionId =
   window.location.hostname === 'localhost' ||
@@ -38,10 +40,7 @@ const extensionId =
 const workerContext = new WorkerExtensionContext();
 workerContext.setExtensionId(extensionId);
 
-const searchEngine = new SearchEngine<DocEntry>({
-  getText: (d) => `${d.title} ${d.description} ${d.section} ${d.path}`,
-});
-searchEngine.setItems(TAURI_DOCS);
+const searchService = workerContext.getService<ISearchService>('search');
 
 // The `Extension` interface's `initialize(ctx)` expects the contracts-flavored
 // ExtensionContext, which is a sibling (not a supertype) of the worker-
@@ -60,7 +59,11 @@ class TauriDocsWorkerExtension implements Extension {
   }
 
   async search(query: string): Promise<ExtensionResult[]> {
-    const results = searchEngine.search(query);
+    const results = await rankDocs(
+      (q, items) => searchService.rank(q, items),
+      query,
+      TAURI_DOCS,
+    );
     return results.slice(0, 5).map((doc, i) => ({
       title: `📖 ${doc.title}`,
       subtitle: doc.description,

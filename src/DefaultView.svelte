@@ -2,15 +2,16 @@
   import { onMount, onDestroy } from 'svelte';
   import {
     ActionContext,
-    SearchEngine,
     searchBarAccessory,
     type ExtensionAction,
     type ExtensionContext,
     type INetworkService,
     type IActionService,
     type IFeedbackService,
+    type ISearchService,
   } from 'asyar-sdk/view';
   import { fetchDocContent } from './lib/docsClient';
+  import { rankDocs } from './lib/docSearch';
   import { TAURI_DOCS, type DocEntry } from './data/tauriDocs';
 
   // --- Props ---
@@ -27,8 +28,15 @@
     network: INetworkService;
     actionService: IActionService;
     feedbackService: IFeedbackService;
+    searchService: ISearchService;
   }
-  let { context, network, actionService: actionServiceProp, feedbackService }: Props = $props();
+  let {
+    context,
+    network,
+    actionService: actionServiceProp,
+    feedbackService,
+    searchService,
+  }: Props = $props();
 
   // --- Preferences (live via onPreferencesChanged) ---
   //
@@ -62,7 +70,7 @@
     // Touch prefsVersion so Svelte tracks it as a dep.
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     prefsVersion;
-    filterDocs();
+    void filterDocs();
   });
 
   // --- State ---
@@ -85,7 +93,7 @@
     // Filter changes can shrink filteredDocs; reset the cursor so it
     // never dangles past the new end.
     selectedIndex = 0;
-    filterDocs();
+    void filterDocs();
   });
 
   let docHtml: string | null = $state(null);
@@ -105,7 +113,7 @@
     if (data.type === 'asyar:view:search') {
       const query = data.payload?.query || '';
       searchQuery = query;
-      filterDocs();
+      void filterDocs();
     }
 
     if (data.type === 'asyar:view:keydown') {
@@ -148,22 +156,26 @@
   });
 
   // --- Search ---
-  const searchEngine = new SearchEngine<DocEntry>({
-    getText: (d) => `${d.title} ${d.description} ${d.section} ${d.path}`,
-  });
+  // `rankDocs` calls out to the host's `ISearchService` (async, over IPC),
+  // replacing the old synchronous client-side `SearchEngine`. Rapid typing
+  // can have an older request's response land after a newer one, so
+  // `filterRequestId` is a cancellation token: only the response matching
+  // the latest issued request is allowed to commit `filteredDocs`.
+  let filterRequestId = 0;
 
-  function filterDocs() {
-    searchEngine.setItems(allDocs);
+  async function filterDocs() {
+    const requestId = ++filterRequestId;
     const q = searchQuery.trim();
-    // Clamp to the `maxResults` preference. For empty queries we still
-    // show everything so the user can browse sections.
-    const hits = q ? searchEngine.search(q) : allDocs;
+    const hits = await rankDocs((query, items) => searchService.rank(query, items), q, allDocs);
+    if (requestId !== filterRequestId) return; // superseded by a newer call
     // Apply the searchbar-accessory section filter on top of the
     // text-search hits. `"all"` means "no section filter".
     const sectionFiltered =
       sectionFilter === 'all'
         ? hits
         : hits.filter((d) => d.section === sectionFilter);
+    // Clamp to the `maxResults` preference. For empty queries we still
+    // show everything so the user can browse sections.
     const clamp = Math.max(1, Math.min(20, maxResults));
     filteredDocs = q ? sectionFiltered.slice(0, clamp) : sectionFiltered;
     selectedIndex = 0;

@@ -27,6 +27,7 @@ import {
   type INetworkService,
   type IActionService,
   type IFeedbackService,
+  type ISearchService,
 } from 'asyar-sdk/view';
 
 // The host parses the URI and mounts us. Hostname contains our extension ID:
@@ -79,6 +80,7 @@ window.parent.postMessage({ type: 'asyar:extension:loaded', extensionId, role: '
 const network = context.getService<INetworkService>('network');
 const actionService = context.getService<IActionService>('actions');
 const feedbackService = context.getService<IFeedbackService>('feedback');
+const searchService = context.getService<ISearchService>('search');
 
 const viewName = new URLSearchParams(window.location.search).get('view') || 'DefaultView';
 const target = document.getElementById('app')!;
@@ -86,6 +88,6 @@ const target = document.getElementById('app')!;
 if (viewName === 'DefaultView') {
   mount(DefaultView, {
     target,
-    props: { context, network, actionService, feedbackService },
+    props: { context, network, actionService, feedbackService, searchService },
   });
 }
