@@ -10,6 +10,7 @@
     type IFeedbackService,
     type ISearchService,
   } from 'asyar-sdk/view';
+  import type { IOpenerService } from 'asyar-sdk/contracts';
   import { fetchDocContent } from './lib/docsClient';
   import { rankDocs } from './lib/docSearch';
   import { TAURI_DOCS, type DocEntry } from './data/tauriDocs';
@@ -148,8 +149,6 @@
   });
 
   onDestroy(() => {
-    // Unregister with the same bare ID used in registerAction
-    actionServiceProp.unregisterAction('org.asyar.tauri-docs:open-in-browser');
     window.removeEventListener('message', handleMessage);
     unsubscribePrefs();
     offAccessory();
@@ -222,65 +221,97 @@
   // Get the selected doc entry
   let selectedDoc: DocEntry | null = $derived(filteredDocs[selectedIndex] ?? null);
 
-  $effect(() => {
-    if (!selectedDoc) return;
-    // When the user has preferred external-browser mode in Settings,
-    // selecting a result skips the in-view fetch entirely and hands the
-    // URL to the host's opener plugin. In-view preview stays blank.
-    if (openInBrowserByDefault) {
-      docHtml = null;
-      docError = false;
+  async function applySearch(query: string, section: string) {
+    const seq = ++searchSeq;
+
+    let candidates = allDocs;
+    if (section && section !== 'all') {
+      candidates = allDocs.filter(d => d.section === section);
+    }
+
+    const trimmed = query.trim();
+    if (!trimmed) {
+      filteredDocs = candidates.slice(0, maxResults);
+      selectedIndex = 0;
+      updateSelectedDoc();
       return;
     }
-    fetchAndRenderDoc(`https://v2.tauri.app${selectedDoc.path}`);
-  });
 
-  async function fetchAndRenderDoc(url: string) {
-    docHtml = '';
-    docError = false; // reset before each fetch so stale error state never bleeds through
+    const results = await rankDocs(trimmed, candidates, searchService, maxResults);
+    if (seq !== searchSeq) return;
+
+    filteredDocs = results;
+    selectedIndex = 0;
+    updateSelectedDoc();
+  }
+
+  function updateSelectedDoc() {
+    selectedDoc = filteredDocs[selectedIndex] ?? null;
+    if (selectedDoc) {
+      void loadDocContent(selectedDoc.path);
+    } else {
+      docHtml = null;
+    }
+  }
+
+  function handleKeydown(key: string) {
+    if (filteredDocs.length === 0) return;
+
+    if (key === 'ArrowDown') {
+      selectedIndex = (selectedIndex + 1) % filteredDocs.length;
+      updateSelectedDoc();
+    } else if (key === 'ArrowUp') {
+      selectedIndex = (selectedIndex - 1 + filteredDocs.length) % filteredDocs.length;
+      updateSelectedDoc();
+    } else if (key === 'Enter') {
+      const doc = filteredDocs[selectedIndex];
+      if (doc) {
+        void openInBrowser(doc.path);
+      }
+    } else if (key === 'PageDown' || (key === 'd' && !searchQuery)) {
+      readerEl?.scrollBy({ top: 200, behavior: 'smooth' });
+    } else if (key === 'PageUp' || (key === 'u' && !searchQuery)) {
+      readerEl?.scrollBy({ top: -200, behavior: 'smooth' });
+    }
+  }
+
+  async function loadDocContent(path: string) {
+    const url = `https://v2.tauri.app${path}`;
+    currentDocUrl = url;
+    docHtml = null;
+    docError = false;
     isLoadingDoc = true;
     try {
-      // `logger` is an optional 3rd arg on fetchDocContent — we skip it
-      // here, failures are reflected in the UI via `docError` anyway.
       const html = await fetchDocContent(url, network);
-      if (html) {
-        docHtml = html;
-      } else {
-        docError = true;
+      if (currentDocUrl === url) {
+        if (html) {
+          docHtml = html;
+        } else {
+          docError = true;
+        }
       }
     } catch {
       docError = true;
     } finally {
-      isLoadingDoc = false;
+      if (currentDocUrl === url) {
+        isLoadingDoc = false;
+      }
     }
   }
 
   async function openInBrowser(path: string) {
     const url = `https://v2.tauri.app${path}`;
-    // Route through the host's opener plugin — window.open() is not reliable in Tauri's WKWebView.
-    // The host handles 'asyar:api:opener:open' by calling invoke('plugin:opener|open_url', { url }).
-    window.parent.postMessage({
-      type: 'asyar:api:opener:open',
-      payload: { url },
-      messageId: Math.random().toString(36).slice(2),
-      extensionId: 'org.asyar.tauri-docs',
-    }, '*');
+    const opener = context.getService<IOpenerService>('opener');
+    await opener.openUrl(url);
 
-    // Show a HUD pill confirming the action and close the launcher in one
-    // shot — exactly the use case the HUD primitive was built for.
     const title = selectedDoc?.title ?? 'doc';
     await feedbackService.showHUD(`📖 Opened ${title} in browser`);
   }
 
-  // Register the "Open in Browser" action whenever selectedDoc changes.
-  // The execute closure is stored locally in the iframe's ExtensionBridge registry.
-  // The host forwards asyar:action:execute back to the iframe when triggered from ⌘K.
-  // ID 'org.asyar.tauri-docs:open-in-browser' is used bare (no extension prefix) — must match unregisterAction calls.
   $effect(() => {
     if (!selectedDoc) return;
 
-    const currentDoc = selectedDoc; // capture for closure
-
+    const currentDoc = selectedDoc;
     const action: ExtensionAction = {
       id: 'org.asyar.tauri-docs:open-in-browser',
       title: 'Open in Browser',
@@ -290,13 +321,7 @@
       execute: () => openInBrowser(currentDoc.path)
     };
 
-    // Register using the proxy directly — no ExtensionContext wrapper needed
     actionServiceProp.registerAction(action);
-
-    // Cleanup: unregister using the same bare ID
-    return () => {
-      actionServiceProp.unregisterAction('org.asyar.tauri-docs:open-in-browser');
-    };
   });
 </script>
 
