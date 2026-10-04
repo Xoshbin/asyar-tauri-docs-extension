@@ -17,10 +17,7 @@
 // `worker.html` at serve time.
 // ───────────────────────────────────────────────────────────────────────────
 
-import {
-  ExtensionContext as WorkerExtensionContext,
-  extensionBridge,
-} from 'asyar-sdk/worker';
+import { ExtensionContext as WorkerExtensionContext, extensionBridge } from 'asyar-sdk/worker';
 import {
   type Extension,
   type ExtensionContext,
@@ -31,11 +28,7 @@ import manifest from '../manifest.json';
 import { TAURI_DOCS } from './data/tauriDocs';
 import { rankDocs } from './lib/docSearch';
 
-const extensionId =
-  window.location.hostname === 'localhost' ||
-  window.location.hostname === 'asyar-extension.localhost'
-    ? window.location.pathname.split('/').filter(Boolean)[0] || 'org.asyar.tauri-docs'
-    : window.location.hostname || 'org.asyar.tauri-docs';
+const extensionId = manifest.id;
 
 const workerContext = new WorkerExtensionContext();
 workerContext.setExtensionId(extensionId);
@@ -59,11 +52,7 @@ class TauriDocsWorkerExtension implements Extension {
   }
 
   async search(query: string): Promise<ExtensionResult[]> {
-    const results = await rankDocs(
-      (q, items) => searchService.rank(q, items),
-      query,
-      TAURI_DOCS,
-    );
+    const results = await rankDocs((q, items) => searchService.rank(q, items), query, TAURI_DOCS);
     return results.slice(0, 5).map((doc, i) => ({
       title: `📖 ${doc.title}`,
       subtitle: doc.description,
@@ -82,5 +71,3 @@ const extensionModule = new TauriDocsWorkerExtension();
 
 extensionBridge.registerManifest(manifest as any);
 extensionBridge.registerExtensionImplementation(extensionId, extensionModule);
-
-window.parent.postMessage({ type: 'asyar:extension:loaded', extensionId, role: 'worker' }, '*');
