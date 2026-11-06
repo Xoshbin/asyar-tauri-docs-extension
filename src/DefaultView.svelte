@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
   import {
     ActionContext,
     searchBarAccessory,
@@ -11,7 +11,7 @@
     type ISearchService,
   } from 'asyar-sdk/view';
   import type { IOpenerService } from 'asyar-sdk/contracts';
-  import { fetchDocContent } from './lib/docsClient';
+  import { fetchDocContent, resolveDocImages } from './lib/docsClient';
   import { rankDocs } from './lib/docSearch';
   import { TAURI_DOCS, type DocEntry } from './data/tauriDocs';
 
@@ -98,8 +98,13 @@
   });
 
   let docHtml: string | null = $state(null);
+  // Cancellation token for doc loads: a slower fetch must not overwrite the
+  // panel after the user has moved on. Plain `let` — it is compared, never
+  // rendered.
+  let currentDocUrl: string | null = null;
   let isLoadingDoc = $state(false);
   let docError = $state(false);
+  let contentEl: HTMLDivElement | undefined = $state();
 
   // Note: listContainer has tabindex="0" for accessibility but we do NOT call
   // listContainer.focus() on mount. Keyboard navigation arrives via the
@@ -286,6 +291,7 @@
       if (currentDocUrl === url) {
         if (html) {
           docHtml = html;
+          void hydrateDocImages(url);
         } else {
           docError = true;
         }
@@ -307,6 +313,38 @@
     const title = selectedDoc?.title ?? 'doc';
     await feedbackService.showHUD(`📖 Opened ${title} in browser`);
   }
+
+  /**
+   * Doc images cannot load from their remote URLs inside the extension view
+   * (its CSP only permits bundled files and `data:`), so each one is fetched
+   * through the `network` permission once the rendered HTML is in the DOM.
+   */
+  async function hydrateDocImages(docUrl: string) {
+    await tick();
+    if (docUrl !== currentDocUrl || !contentEl) return;
+    await resolveDocImages(contentEl, network, (url) => void openImageExternally(url));
+  }
+
+  async function openImageExternally(url: string) {
+    const opener = context.getService<IOpenerService>('opener');
+    await opener.openUrl(url);
+  }
+
+  // Load the doc body whenever the selection changes (click, arrow keys,
+  // search or section-filter results). Keyed on the path so unrelated
+  // re-renders of the same doc do not refetch.
+  let loadedPath: string | null = null;
+  $effect(() => {
+    const path = selectedDoc?.path ?? null;
+    if (path === loadedPath) return;
+    loadedPath = path;
+    if (path) {
+      void loadDocContent(path);
+    } else {
+      currentDocUrl = null;
+      docHtml = null;
+    }
+  });
 
   $effect(() => {
     if (!selectedDoc) return;
@@ -412,7 +450,7 @@
               </button>
             </div>
           </div>
-          <div class="detail-content prose">{@html docHtml}</div>
+          <div class="detail-content prose" bind:this={contentEl}>{@html docHtml}</div>
         {/if}
       </div>
     </div>
@@ -542,6 +580,7 @@
     position: sticky;
     top: 0;
     z-index: 10;
+    flex-shrink: 0;
   }
 
   .doc-header h2 {
@@ -566,6 +605,7 @@
   }
 
   .detail-content {
+    flex-shrink: 0;
     padding: 28px 32px;
   }
 
@@ -750,6 +790,30 @@
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 1em;
+  }
+  :global(.prose img) {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    margin-bottom: 1em;
+  }
+  :global(.prose .doc-image-chip) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 1em;
+    padding: var(--space-3) var(--space-5);
+    font-family: var(--font-ui);
+    font-size: var(--font-size-md);
+    color: var(--accent-primary);
+    background: var(--bg-tertiary);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  :global(.prose .doc-image-chip:hover) {
+    border-color: var(--accent-primary);
   }
   :global(.prose th), :global(.prose td) {
     border: 1px solid var(--border-color);
