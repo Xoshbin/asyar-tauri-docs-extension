@@ -5,9 +5,9 @@
   "description": "Search and browse Tauri v2 documentation",
   "author": "Developer",
   "searchable": true,
-  "icon": "📖",
+  "icon": "assets/icon.png",
   "type": "extension",
-  "asyarSdk": "^4.15.0",
+  "asyarSdk": "^4.17.0",
   "permissions": [
     "network",
     "shell:open-url"
