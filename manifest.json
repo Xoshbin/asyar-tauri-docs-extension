@@ -33,7 +33,6 @@
       "id": "open",
       "name": "Tauri Docs",
       "description": "Browse Tauri v2 documentation",
-      "icon": "📖",
       "mode": "view",
       "component": "DefaultView",
       "searchBarAccessory": {
