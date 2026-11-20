@@ -73,5 +73,11 @@
   ],
   "background": {
     "main": "dist/worker.js"
-  }
+  },
+  "category": "developer-tools",
+  "platforms": [
+    "macos",
+    "windows",
+    "linux"
+  ]
 }
